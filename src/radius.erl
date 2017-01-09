@@ -3,7 +3,7 @@
 %% API
 -export([start_service/2, stop_service/1, services/0]).
 -export([start_service/3]).
--export([add_client/2, del_client/2]).
+-export([add_client/2, del_client/1]).
 -export([attribute_value/2]).
 -export([stats/1]).
 
@@ -35,25 +35,28 @@ services() ->
     lists:usort([radius_service:name(element(2, S)) || S <- supervisor:which_children(radius_sup)]).
 
 %% @doc Add new NAS to the list of allowed NASes for specific service
--spec add_client(atom(), #nas_spec{}) -> ok.
-add_client(Name, NasSpec) when is_atom(Name), is_record(NasSpec, nas_spec) ->
-    Specs = case ets:lookup(radius_clients, Name) of
+% -spec add_client(any(), #nas_spec{}) -> ok.
+add_client(IP, NasSpec) when is_record(NasSpec, nas_spec) ->
+    case ets:lookup(radius_clients, IP) of
         [] ->
-            {Name, [NasSpec]};
-        [{Name, Value}] ->
-            {Name, [NasSpec | Value]}
-    end,
-    true = ets:insert(radius_clients, Specs), ok.
+            ets:insert(radius_clients, {IP, NasSpec});
+        [{IP, _}] ->
+            already_exists;
+        _ ->
+            error
+    end.
 
 %% @doc Delete NAS for specific service
--spec del_client(atom(), any()) -> ok.
-del_client(SvcName, NasName) when is_atom(SvcName) ->
-    case ets:lookup(radius_clients, SvcName) of
+-spec del_client(any()) -> ok|error|not_found.
+del_client(IP) ->
+    case ets:lookup(radius_clients, IP) of
         [] ->
+            not_found;
+        [{IP, _}] ->
+            ets:delete(radius_clients, IP),
             ok;
-        [{SvcName, Value}] ->
-            Specs = [Spec || Spec <- Value, Spec#nas_spec.name =/= NasName],
-            true = ets:insert(radius_clients, {SvcName, Specs}), ok
+        _ ->
+            error
     end.
 
 %% @doc Returns value of RADIUS attribute defined in packet

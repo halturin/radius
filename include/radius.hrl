@@ -89,5 +89,6 @@
 -record(nas_spec, {
     name :: term(),
     ip :: {ip, inet:ip_address()} | {net, {inet:ip_address(), Mask :: 0..32 | inet:ip_address()}},
-    secret :: string()
+    secret :: string(),
+    opts :: term()
 }).

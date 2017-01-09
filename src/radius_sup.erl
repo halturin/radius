@@ -13,8 +13,8 @@
     {radius_dict_attrs, [{keypos, 2}, {read_concurrency, true}]},
     {radius_dict_values, [{read_concurrency, true}]}
 ]).
--define(SPEC(Id, Name, IP, Port, Callback, SocketOpts),
-    {Id, {radius_service, start_link, [Name, IP, Port, Callback, SocketOpts]},
+-define(SPEC(Id, IP, Port, Callback, SocketOpts),
+    {Id, {radius_service, start_link, [IP, Port, Callback, SocketOpts]},
     transient, brutal_kill, worker, [radius_service]}
 ).
 
@@ -26,12 +26,12 @@ start_child([Name, IP, Port, Callback, SocketOpts]) ->
         N when is_integer(N) andalso N > 1 ->
             NewSocketOpts = reuseport(SocketOpts),
             F = fun(Idx) ->
-                Id = list_to_atom(atom_to_list(Name) ++ integer_to_list(Idx)),
-                supervisor:start_child(?MODULE, ?SPEC(Id, Name, IP, Port, Callback, NewSocketOpts))
+                Id = list_to_atom(Name ++ integer_to_list(Idx)),
+                supervisor:start_child(?MODULE, ?SPEC(Id, IP, Port, Callback, NewSocketOpts))
             end,
             lists:foreach(F, lists:seq(1, N));
         _ ->
-            supervisor:start_child(?MODULE, ?SPEC(Name, Name, IP, Port, Callback, SocketOpts))
+            supervisor:start_child(?MODULE, ?SPEC(Name, IP, Port, Callback, SocketOpts))
     end.
 
 init([]) ->
