@@ -25,7 +25,7 @@ decode_packet(Bin, Secret) ->
                 },
                 case attribute_value("Message-Authenticator", A) of
                     undefined ->
-                        {ok, Packet};
+                        {error, invalid_message_authenticator};
                     Value ->
                         A1 = lists:keyreplace("Message-Authenticator", 1, A, {"Message-Authenticator", <<0:128>>}),
                         {ok, A2} = encode_attributes(A1),
