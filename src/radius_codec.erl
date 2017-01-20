@@ -12,8 +12,9 @@
 -spec decode_packet(Bin :: binary(), Secret :: string()) ->
     {ok, Packet :: #radius_packet{}} | {error, Reason :: term()}.
 decode_packet(Bin, Secret) ->
+
     try
-        <<?RADIUS_PACKET>> = Bin,
+        <<Code:8, Ident:8, Length:16, Auth:16/binary, Attrs/binary>> = Bin,
         case byte_size(Attrs) >= (Length - 20) of
             true ->
                 A = decode_attributes(Attrs, []),
@@ -23,13 +24,19 @@ decode_packet(Bin, Secret) ->
                     auth = Auth,
                     attrs = A
                 },
+
+                % FIXME later
                 case attribute_value("Message-Authenticator", A) of
                     undefined ->
-                        {ok, Packet}; % FIXME. wrong way to handle Authenticator
+                        MessageAuth = <<0:128>>,
+                        validate(Code, <<Code:8, Ident:8, Length:16>>,
+                                    MessageAuth, Auth, Attrs, Secret),
+                        {ok, Packet};
                     Value ->
                         A1 = lists:keyreplace("Message-Authenticator", 1, A, {"Message-Authenticator", <<0:128>>}),
                         {ok, A2} = encode_attributes(A1),
                         Packet1 = [Code, Ident, <<Length:16>>, Auth, A2],
+
                         case crypto:hmac(md5, Secret, Packet1) =:= Value of
                             true ->
                                 {ok, Packet};
@@ -64,7 +71,7 @@ encode_request(Request, Secret) ->
     Ident = Request#radius_packet.ident,
     {ok, Attrs} = encode_attributes(Request#radius_packet.attrs),
     Length = <<(20 + byte_size(Attrs)):16>>,
-    Auth = erlang:md5([Code, Ident, Length, <<0:128>>, Attrs, Secret]),
+    Auth =  crypto:hash(md5,[Code, Ident, Length, <<0:128>>, Attrs, Secret]),
     list_to_binary([Code, Ident, Length, Auth, Attrs]).
 
 %% @doc Returns type of the request.
@@ -105,8 +112,8 @@ encode_response(Request, Response, Secret) ->
             case encode_attributes(A) of
                 {ok, Attrs} ->
                     Length = <<(20 + byte_size(Attrs)):16>>,
-                    Auth = erlang:md5([Code, Ident, Length, ReqAuth, Attrs, Secret]),
-                    Data = list_to_binary([Code, Ident, Length, Auth, Attrs]),
+                    Auth   = crypto:hash(md5,[Code, Ident, Length, ReqAuth, Attrs, Secret]),
+                    Data   = list_to_binary([Code, Ident, Length, Auth, Attrs]),
                     {ok, Data};
                  {error, Reason} ->
                     {error, Reason}
@@ -292,3 +299,31 @@ lookup_value(Code, Name, Attrs) ->
                 false -> undefined
             end
     end.
+
+validate(?ACCOUNTING_REQUEST, Head, _MessageAuth, Auth, Attrs, Secret) ->
+    case crypto:hash(md5, [Head, <<0:128>>, Attrs, Secret]) of
+        Auth ->
+            ok;
+        _ ->
+            throw({error, "Authenticator Attribute is invalid"})
+    end;
+
+validate(Code, Head, MessageAuth, Auth, Attrs, Secret)
+    when   (Code =:= ?ACCESS_ACCEPT)
+    orelse (Code =:= ?ACCESS_REJECT)
+    orelse (Code =:= ?ACCOUNTING_RESPONSE)
+    orelse (Code =:= ?COA_ACK)
+    orelse (Code =:= ?COA_NAK)
+    orelse (Code =:= ?DISCONNECT_ACK)
+    orelse (Code =:= ?DISCONNECT_NAK)
+    orelse (Code =:= ?ACCESS_CHALLENGE) ->
+
+    case crypto:hash(md5, [Head, MessageAuth, Attrs, Secret]) of
+        Auth ->
+            ok;
+        _ ->
+            throw({error, "Authenticator Attribute is invalid"})
+    end;
+
+validate(_Code, _Head, _MessageAuth, _Auth, _Attrs, _Secret) ->
+    ok.

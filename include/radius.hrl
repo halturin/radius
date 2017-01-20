@@ -15,7 +15,6 @@
 %% |                                                               |
 %% +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 %% |  Attributes ...
--define(RADIUS_PACKET, Code:8, Ident:1/binary, Length:16, Auth:16/binary, Attrs/binary).
 
 %% RADIUS packet record
 %% Fields:
