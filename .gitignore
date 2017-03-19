@@ -7,3 +7,5 @@ erl_crash.dump
 logs
 test/*.beam
 _build
+.rebar*
+
