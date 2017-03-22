@@ -19,7 +19,7 @@ add(Value) when is_record(Value, value) ->
 %% @doc Looking for the specified RADIUS attribute
 -spec lookup_attribute(string() | non_neg_integer() | tuple()) ->
     not_found | #attribute{}.
-lookup_attribute(Name) when is_list(Name) ->
+lookup_attribute(Name) when is_binary(Name) ->
     Pattern = {attribute, '_', '_', Name, '_'},
     case ets:match_object(?ATTRS_TABLE, Pattern, 1) of
         {[Attribute], _} ->

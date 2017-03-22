@@ -47,13 +47,13 @@ parse_line(["$INCLUDE", File]) ->
     {ok, load(File)};
 
 parse_line(["ATTRIBUTE", Name, Code, Type]) ->
-    {ok, #attribute{name = Name, code = list_to_integer(Code), type = list_to_atom(Type)}};
+    {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)}};
 
 parse_line(["ATTRIBUTE", Name, Code, Type, Extra]) ->
     case get({vendor, Extra}) of
         undefined ->
             Opts = [parse_option(string:tokens(I, "=")) || I <- string:tokens(Extra, ",")],
-            A = #attribute{name = Name, code = list_to_integer(Code), type = list_to_atom(Type)},
+            A = #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)},
             {ok, A#attribute{opts = Opts}};
         Vendor ->
             C = {Vendor, list_to_integer(Code)},
@@ -62,7 +62,7 @@ parse_line(["ATTRIBUTE", Name, Code, Type, Extra]) ->
     end;
 
 parse_line(["VALUE", A, Name, Value]) ->
-    V = #value{aname = A, vname = Name, value = list_to_integer(Value)},
+    V = #value{aname = list_to_binary(A), vname = list_to_binary(Name), value = list_to_integer(Value)},
     {ok, V};
 parse_line(["VENDOR", Name, Code]) ->
     put({vendor, Name}, list_to_integer(Code));

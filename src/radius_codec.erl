@@ -107,7 +107,7 @@ encode_response(Request, Response, Secret) ->
     Code = <<C:8>>,
     Ident = Request#radius_packet.ident,
     ReqAuth = Request#radius_packet.auth,
-    case attribute_value("EAP-Message", A) of
+    case attribute_value(<<"EAP-Message">>, A) of
         undefined ->
             case encode_attributes(A) of
                 {ok, Attrs} ->
@@ -120,14 +120,14 @@ encode_response(Request, Response, Secret) ->
             end;
         _Value ->
             try
-                A1 = A ++ [{"Message-Authenticator", <<0:128>>}],
+                A1 = A ++ [{<<"Message-Authenticator">>, <<0:128>>}],
                 {ok, A2} = encode_attributes(A1),
 
                 Length = <<(20 + byte_size(A2)):16>>,
                 Packet = list_to_binary([Code, Ident, Length, ReqAuth, A2]),
                 MA = crypto:hmac(md5, Secret, Packet),
 
-                A3 = A ++ [{"Message-Authenticator", MA}],
+                A3 = A ++ [{<<"Message-Authenticator">>, MA}],
                 {ok, A4} = encode_attributes(A3),
 
                 Auth = erlang:md5([Code, Ident, Length, ReqAuth, A4, Secret]),
@@ -263,6 +263,9 @@ encode_value(Value, integer) when is_list(Value) ->
     end;
 encode_value(Value, integer) when is_integer(Value) ->
     <<Value:32>>;
+encode_value(Value, integer) when is_float(Value) ->
+    V = round(Value),
+    <<V:32>>;
 encode_value(Value, date) ->
     encode_value(Value, integer);
 encode_value(Value, ipaddr) when is_list(Value) ->
@@ -272,6 +275,14 @@ encode_value(Value, ipaddr) when is_list(Value) ->
         {error, Reason} ->
             throw({error, Reason})
     end;
+encode_value(Value, ipaddr) when is_binary(Value) ->
+    case inet_parse:address(Value) of
+        {ok, {A, B, C, D}} ->
+            <<A:8, B:8, C:8, D:8>>;
+        {error, Reason} ->
+            throw({error, Reason})
+    end;
+
 encode_value({A, B, C, D}, ipaddr) ->
     <<A:8, B:8, C:8, D:8>>;
 encode_value(Value, ipv6addr) when is_list(Value) ->
