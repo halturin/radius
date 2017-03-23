@@ -46,6 +46,9 @@ strip_comments(Line) ->
 parse_line(["$INCLUDE", File]) ->
     {ok, load(File)};
 
+parse_line(["ATTRIBUTE", Name, "0x" ++ Code, Type]) ->
+    {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code,16), type = list_to_atom(Type)}};
+
 parse_line(["ATTRIBUTE", Name, Code, Type]) ->
     {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)}};
 
@@ -61,6 +64,10 @@ parse_line(["ATTRIBUTE", Name, Code, Type, Extra]) ->
             {ok, A}
     end;
 
+parse_line(["VALUE", A, Name, "0x" ++ Value]) ->
+    V = #value{aname = list_to_binary(A), vname = list_to_binary(Name), value = list_to_integer(Value, 16)},
+    {ok, V};
+
 parse_line(["VALUE", A, Name, Value]) ->
     V = #value{aname = list_to_binary(A), vname = list_to_binary(Name), value = list_to_integer(Value)},
     {ok, V};
@@ -71,5 +78,7 @@ parse_line(_) ->
 
 parse_option(["has_tag"]) ->
     has_tag;
+parse_option(["concat"]) ->
+    concat;
 parse_option(["encrypt", Value]) ->
     {encrypt, list_to_integer(Value)}.
