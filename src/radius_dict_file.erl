@@ -50,10 +50,17 @@ parse_line(["ATTRIBUTE", Name, "0x" ++ Code, Type]) ->
     {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code,16), type = list_to_atom(Type)}};
 
 parse_line(["ATTRIBUTE", Name, Code, Type]) ->
-    {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)}};
+    case get(vendor) of
+        undefined ->
+            {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)}};
+        Vendor ->
+            C = {Vendor, list_to_integer(Code)},
+            A = #attribute{name = Name, code = C, type = list_to_atom(Type)},
+            {ok, A}
+    end;
 
 parse_line(["ATTRIBUTE", Name, Code, Type, Extra]) ->
-    case get({vendor, Extra}) of
+    case get(vendor) of
         undefined ->
             Opts = [parse_option(string:tokens(I, "=")) || I <- string:tokens(Extra, ",")],
             A = #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)},
@@ -72,7 +79,9 @@ parse_line(["VALUE", A, Name, Value]) ->
     V = #value{aname = list_to_binary(A), vname = list_to_binary(Name), value = list_to_integer(Value)},
     {ok, V};
 parse_line(["VENDOR", Name, Code]) ->
-    put({vendor, Name}, list_to_integer(Code));
+    put(vendor, list_to_integer(Code));
+parse_line(["END VENDOR" | _ ]) ->
+    erase(vendor);
 parse_line(_) ->
     ok.
 

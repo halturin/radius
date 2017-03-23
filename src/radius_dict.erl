@@ -39,7 +39,7 @@ lookup_attribute(Code) ->
 -spec lookup_value(string(), string()) -> not_found | term().
 lookup_value(A, V) ->
     case ets:lookup(?VALUES_TABLE, {A, V}) of
-        [{_Key, Value}] ->
+        [{_Key, {value, _, Value, _}}] ->
             Value;
         [] ->
             not_found

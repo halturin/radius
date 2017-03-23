@@ -169,8 +169,15 @@ decode_attribute(<<Type:8, Length:8, Rest/binary>>) ->
                 not_found ->
                     {Value, Rest1} = decode_value(Rest, Length - 2),
                     {{Type, Value}, Rest1};
+                A when A#attribute.type == integer ->
+                    {Value, Rest1} = decode_value(Rest, Length - 2, A#attribute.type),
+                    case radius_dict:lookup_value(A#attribute.name, Value) of
+                        not_found -> {{A#attribute.name, Value}, Rest1};
+                        V -> {{A#attribute.name, V}, Rest1}
+                    end;
                 A ->
                     {Value, Rest1} = decode_value(Rest, Length - 2, A#attribute.type),
+
                     {{A#attribute.name, Value}, Rest1}
             end
     end.
@@ -275,6 +282,7 @@ encode_value(Value, ipaddr) when is_list(Value) ->
         {error, Reason} ->
             throw({error, Reason})
     end;
+
 encode_value(Value, ipaddr) when is_binary(Value) ->
     case inet_parse:address(Value) of
         {ok, {A, B, C, D}} ->
