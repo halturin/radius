@@ -94,6 +94,8 @@ identify_packet(?COA_ACK) ->
     'CoA-ACK';
 identify_packet(?COA_NAK) ->
     'CoA-NAK';
+identify_packet(?SERVER_STATUS) ->
+    'Server-Status';
 identify_packet(Type) ->
     Type.
 
