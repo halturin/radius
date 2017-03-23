@@ -204,6 +204,9 @@ decode_value(Bin, Length, string) ->
 decode_value(Bin, Length, integer) ->
     <<Value:Length/integer-unit:8, Rest/binary>> = Bin,
     {Value, Rest};
+decode_value(Bin, Length, integer64) ->
+    <<Value:Length/integer-unit:8, Rest/binary>> = Bin,
+    {Value, Rest};
 %% 32 bit value in big endian order - seconds since 00:00:00 GMT, Jan. 1, 1970
 decode_value(Bin, Length, date) ->
     decode_value(Bin, Length, integer);
