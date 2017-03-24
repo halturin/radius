@@ -1,6 +1,6 @@
 {application, radius, [
     {description, "RADIUS"},
-    {vsn, "0.0.13"},
+    {vsn, "0.1.0"},
     {applications, [kernel, stdlib]},
     {mod, {radius_app, []}},
     {maintainers, ["Artem Teslenko"]},
