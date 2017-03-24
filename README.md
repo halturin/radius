@@ -1,7 +1,7 @@
 RADIUS protocol
 ===============
 
-[![Build Status](https://secure.travis-ci.org/ates/radius.png)](https://travis-ci.org/ates/radius)
+This project has been forked from 'https://github.com/ates/radius' and has no backward capability with it. The key different is using binary type for the attributes. The second difference is using binary type for the ip address and string values.
 
 REUSE_PORT
 ----------
