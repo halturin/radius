@@ -1,7 +1,7 @@
 -module(radius_dict).
 
 %% API
--export([add/1, lookup_attribute/1, lookup_value/2, to_list/1]).
+-export([add/1, lookup_attribute/1, lookup_value/2, lookup_value_id/2, to_list/1]).
 
 -include("radius.hrl").
 
@@ -42,6 +42,15 @@ lookup_value(A, V) ->
         [{_Key, {value, _, Value, _}}] ->
             Value;
         [] ->
+            not_found
+    end.
+
+lookup_value_id(A, V) ->
+    Pattern = {{A,'_'}, {value, A,V,'_'}},
+    case ets:match_object(?VALUES_TABLE, Pattern, 1) of
+        {[{{_,ID},_}], _} ->
+            ID;
+        '$end_of_table' ->
             not_found
     end.
 

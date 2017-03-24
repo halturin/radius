@@ -157,8 +157,12 @@ encode_attributes(Attrs) ->
 decode_attributes(<<>>, Attrs) ->
     lists:reverse(Attrs);
 decode_attributes(Bin, Attrs) ->
-    {Attr, Rest} = decode_attribute(Bin),
-    decode_attributes(Rest, [Attr | Attrs]).
+    case decode_attribute(Bin) of
+        {[{_,_}|_] = Attr, Rest} ->
+            decode_attributes(Rest, lists:merge(Attr, Attrs));
+        {Attr, Rest} ->
+            decode_attributes(Rest, [Attr | Attrs])
+    end.
 
 decode_attribute(<<Type:8, Length:8, Rest/binary>>) ->
     case Type of
@@ -201,7 +205,7 @@ decode_vendor_attribute(VendorId, <<Id, Length:8, Value/binary>>, Acc) ->
 %% 0-253 octets
 decode_value(Bin, Length, string) ->
     <<Value:Length/binary, Rest/binary>> = Bin,
-    {binary_to_list(Value), Rest};
+    {Value, Rest};
 %% 32 bit value in big endian order (high byte first)
 decode_value(Bin, Length, integer) ->
     <<Value:Length/integer-unit:8, Rest/binary>> = Bin,
@@ -216,7 +220,7 @@ decode_value(Bin, Length, date) ->
 decode_value(Bin, Length, ipaddr) ->
     <<Value:Length/binary, Rest/binary>> = Bin,
     <<A:8, B:8, C:8, D:8>> = Value,
-    {{A, B, C, D}, Rest};
+    {list_to_binary(inet:ntoa({A, B, C, D})), Rest};
 decode_value(Bin, Length, ipv6addr) ->
     <<Value:Length/binary, Rest/binary>> = Bin,
     {list_to_tuple([I || <<I:16>> <= Value]), Rest};
@@ -241,11 +245,16 @@ encode_attributes([], Bin) ->
 encode_attributes(undefined, []) -> <<>>.
 
 encode_attribute({Code, Value}) ->
+    Value1 = case radius_dict:lookup_value_id(Code, Value) of
+                        not_found -> Value;
+                        V -> V
+                    end,
     case radius_dict:lookup_attribute(Code) of
         not_found ->
+            io:format("NOT FOUND: ~p ~n", [Code]),
             throw({error, not_found});
         #attribute{code = Code1, type = Type} ->
-            encode_attribute(Code1, Type, Value)
+            encode_attribute(Code1, Type, Value1)
     end.
 
 encode_attribute({Id, Code}, Type, Value) ->
@@ -259,8 +268,6 @@ encode_attribute(Code, Type, Value) ->
     Length = 2 + byte_size(Bin),
     <<Code:8, Length:8, Bin/binary>>.
 
-encode_value(Value, _Type) when is_binary(Value) ->
-    Value;
 encode_value(Value, octets) when is_list(Value) ->
     list_to_binary(Value);
 encode_value(Value, string) when is_list(Value) ->
@@ -275,9 +282,14 @@ encode_value(Value, integer) when is_list(Value) ->
     end;
 encode_value(Value, integer) when is_integer(Value) ->
     <<Value:32>>;
+encode_value(Value, integer64) when is_integer(Value) ->
+    <<Value:64>>;
 encode_value(Value, integer) when is_float(Value) ->
     V = round(Value),
     <<V:32>>;
+encode_value(Value, integer64) when is_float(Value) ->
+    V = round(Value),
+    <<V:64>>;
 encode_value(Value, date) ->
     encode_value(Value, integer);
 encode_value(Value, ipaddr) when is_list(Value) ->
@@ -289,7 +301,7 @@ encode_value(Value, ipaddr) when is_list(Value) ->
     end;
 
 encode_value(Value, ipaddr) when is_binary(Value) ->
-    case inet_parse:address(Value) of
+    case inet_parse:address(binary_to_list(Value)) of
         {ok, {A, B, C, D}} ->
             <<A:8, B:8, C:8, D:8>>;
         {error, Reason} ->
@@ -311,8 +323,12 @@ encode_value({Prefix, IP}, ipv6prefix) ->
     <<0:8, Prefix:8, (encode_value(IP, ipv6addr))/binary>>;
 encode_value(Value, byte) ->
     <<Value:8/unsigned-integer>>;
-encode_value(_Value, _Type) ->
+encode_value(Value, _Type) when is_binary(Value) ->
+    Value;
+encode_value(Value, Type) ->
+    io:format("ER : ~p ~p", [Value, Type]),
     throw({error, encode_value}).
+
 
 lookup_value(Code, Name, Attrs) ->
     case lists:keyfind(Code, 1, Attrs) of

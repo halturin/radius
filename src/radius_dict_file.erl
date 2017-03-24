@@ -55,7 +55,7 @@ parse_line(["ATTRIBUTE", Name, Code, Type]) ->
             {ok, #attribute{name = list_to_binary(Name), code = list_to_integer(Code), type = list_to_atom(Type)}};
         Vendor ->
             C = {Vendor, list_to_integer(Code)},
-            A = #attribute{name = Name, code = C, type = list_to_atom(Type)},
+            A = #attribute{name = list_to_binary(Name), code = C, type = list_to_atom(Type)},
             {ok, A}
     end;
 
@@ -67,7 +67,7 @@ parse_line(["ATTRIBUTE", Name, Code, Type, Extra]) ->
             {ok, A#attribute{opts = Opts}};
         Vendor ->
             C = {Vendor, list_to_integer(Code)},
-            A = #attribute{name = Name, code = C, type = list_to_atom(Type)},
+            A = #attribute{name = list_to_binary(Name), code = C, type = list_to_atom(Type)},
             {ok, A}
     end;
 
