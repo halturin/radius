@@ -24,16 +24,15 @@ decode_packet(Bin, Secret) ->
                     auth = Auth,
                     attrs = A
                 },
-
                 % FIXME later
-                case attribute_value("Message-Authenticator", A) of
+                case attribute_value(<<"Message-Authenticator">>, A) of
                     undefined ->
                         MessageAuth = <<0:128>>,
                         validate(Code, <<Code:8, Ident:8, Length:16>>,
                                     MessageAuth, Auth, Attrs, Secret),
                         {ok, Packet};
                     Value ->
-                        A1 = lists:keyreplace("Message-Authenticator", 1, A, {"Message-Authenticator", <<0:128>>}),
+                        A1 = lists:keyreplace(<<"Message-Authenticator">>, 1, A, {<<"Message-Authenticator">>, <<0:128>>}),
                         {ok, A2} = encode_attributes(A1),
                         Packet1 = [Code, Ident, <<Length:16>>, Auth, A2],
 
